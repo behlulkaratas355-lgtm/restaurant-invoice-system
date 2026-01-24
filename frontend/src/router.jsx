@@ -1,0 +1,68 @@
+import React from 'react';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
+import LoginView from './pages/LoginView';
+import AdminTools from './components/AdminTools';
+import DashboardView from './pages/DashboardView';
+import UploadView from './pages/UploadView';
+import ProductsView from './pages/ProductsView';
+import AnalyticsView from './pages/AnalyticsView';
+import RestaurantsView from './pages/RestaurantsView';
+import AnomaliesView from './pages/AnomaliesView';
+import UsersView from './pages/UsersView';
+import LogsView from './pages/LogsView';
+
+const router = createBrowserRouter([
+  {
+    path: '/login',
+    element: <LoginView />,
+  },
+  {
+    path: '/',
+    element: <Layout />,
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/dashboard" replace />,
+      },
+      {
+        path: 'dashboard',
+        element: <DashboardView />,
+      },
+      {
+        path: 'upload',
+        element: <UploadView />,
+      },
+      {
+        path: '/admin/tools',
+        element: <AdminTools />
+      },
+      {
+        path: 'products',
+        element: <ProductsView />,
+      },
+      {
+        path: 'analytics',
+        element: <AnalyticsView />,
+      },
+      {
+        path: 'restaurants',
+        element: <RestaurantsView />,
+      },
+      {
+        path: 'anomalies',
+        element: <AnomaliesView />,
+      },
+      {
+        path: 'users',
+        element: <UsersView />,
+      },
+      {
+        path: 'logs',
+        element: <LogsView />,
+      },
+    ],
+  },
+]);
+
+export default router;

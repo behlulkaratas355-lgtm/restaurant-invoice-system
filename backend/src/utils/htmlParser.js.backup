@@ -1,0 +1,160 @@
+import * as cheerio from 'cheerio';
+import fs from 'fs';
+import path from 'path';
+
+class HTMLParser {
+  constructor(filePath) {
+    this.filePath = filePath;
+    this.html = fs.readFileSync(filePath, 'utf-8');
+    this.$ = cheerio.load(this.html);
+    this.products = [];
+    this.restaurantName = null;
+  }
+
+  extractRestaurantFromFilename() {
+    const filename = path.basename(this.filePath, path.extname(this.filePath));
+    let cleanName = filename.replace(/^\d{10,13}-/, '');
+    cleanName = cleanName.replace(/-/g, ' ').trim();
+    
+    if (cleanName.length > 2 && cleanName.length < 100) {
+      return cleanName;
+    }
+    return null;
+  }
+
+  extractRestaurantName() {
+    let name = this.extractRestaurantFromFilename();
+    if (name) {
+      this.restaurantName = name;
+      return name;
+    }
+    this.restaurantName = null;
+    return null;
+  }
+
+  parse() {
+    const $ = this.$;
+    let currentProduct = null;
+    let currentProductCode = null;
+
+    console.log('Начинаем парсинг HTML...');
+    
+    this.extractRestaurantName();
+    if (this.restaurantName) {
+      console.log(`✓ Ресторан: ${this.restaurantName}`);
+    }
+
+    $('table tr').each((index, row) => {
+      const $row = $(row);
+      const cells = $row.find('td');
+
+      // Строки с кодом и названием товара (4 ячейки, где 2-я с colspan=18)
+      if (cells.length === 4) {
+        const code = $(cells[1]).text().trim();
+        const nameCell = cells[2];
+        const name = nameCell.text().trim();
+        const colspan = nameCell.attr('colspan') || '1';
+        
+        // Код товара - числовой, название длинное с большим colspan
+        if (/^\d{3,6}$/.test(code) && name.length > 3 && parseInt(colspan) > 10) {
+          currentProductCode = code;
+          currentProduct = name;
+          console.log(`✓ Товар [${currentProductCode}]: ${currentProduct.substring(0, 50)}...`);
+          return;
+        }
+      }
+
+      // Строки с данными о поставках (обычно 16 ячеек, но с colspan)
+      if (cells.length >= 14 && currentProduct && currentProductCode) {
+        try {
+          const supplier = $(cells[1]).text().trim();
+          
+          // Пропускаем итоговые строки
+          if (!supplier || supplier.includes('Итого')) {
+            return;
+          }
+
+          const quantity = parseFloat($(cells[5]).text().trim().replace(/,/g, '.'));
+          const priceWholesale = parseFloat($(cells[6]).text().trim().replace(/,/g, '.'));
+          const priceVat = parseFloat($(cells[7]).text().trim().replace(/,/g, '.'));
+          const sumVat = parseFloat($(cells[11]).text().trim().replace(/,/g, '.'));
+          
+          const invoiceType = $(cells[12]).text().trim();
+          const invoiceNumber = $(cells[13]).text().trim();
+          const invoiceDate = this.parseDate($(cells[14]).text().trim());
+
+          if (!invoiceNumber || !invoiceDate || isNaN(quantity) || quantity <= 0) {
+            return;
+          }
+
+          this.products.push({
+            code: currentProductCode,
+            name: currentProduct,
+            supplier,
+            quantity,
+            pricewholesale: priceWholesale || 0,
+            pricevatincluded: priceVat || 0,
+            sumvatincluded: sumVat || 0,
+            invoicetype: invoiceType,
+            invoicenumber: invoiceNumber,
+            invoicedate: invoiceDate
+          });
+
+        } catch (error) {
+          // Пропускаем ошибочные строки
+        }
+      }
+    });
+
+    console.log(`✓ Извлечено записей: ${this.products.length}`);
+    return this.products;
+  }
+
+  parseDate(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split('.');
+    if (parts.length !== 3) return null;
+    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+  }
+
+  getSuppliers() {
+    return [...new Set(this.products.map(p => p.supplier))];
+  }
+
+  getInvoices() {
+    const invoicesMap = new Map();
+    this.products.forEach(product => {
+      const key = `${product.invoicenumber}|${product.invoicedate}|${product.supplier}`;
+      if (!invoicesMap.has(key)) {
+        invoicesMap.set(key, {
+          number: product.invoicenumber,
+          date: product.invoicedate,
+          supplier: product.supplier
+        });
+      }
+    });
+    return Array.from(invoicesMap.values());
+  }
+
+  getStats() {
+    return {
+      products: this.products.length,
+      suppliers: this.getSuppliers().length,
+      invoices: this.getInvoices().length
+    };
+  }
+}
+
+export const parseInvoiceHTML = (filePath) => {
+  const parser = new HTMLParser(filePath);
+  const products = parser.parse();
+  return {
+    products,
+    suppliers: parser.getSuppliers(),
+    invoices: parser.getInvoices(),
+    stats: parser.getStats(),
+    restaurantName: parser.restaurantName
+  };
+};
+
+export default HTMLParser;
