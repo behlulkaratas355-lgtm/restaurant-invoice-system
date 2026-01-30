@@ -35,6 +35,9 @@ const Layout = () => {
           <NavLink to="/products" className={({ isActive }) => isActive ? "active" : ""}>
             📦 Продукты
           </NavLink>
+          <NavLink to="/product-analysis" className={({ isActive }) => isActive ? "active" : ""}>
+            📈 Анализ цен
+          </NavLink>
           <NavLink to="/analytics" className={({ isActive }) => isActive ? "active" : ""}>
             📈 Аналитика
           </NavLink>

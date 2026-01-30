@@ -43,10 +43,6 @@ const router = createBrowserRouter([
         element: <ProductsView />,
       },
       {
-        path: 'product-analysis',
-        element: <ProductAnalysisView />,
-      },
-      {
         path: 'analytics',
         element: <AnalyticsView />,
       },

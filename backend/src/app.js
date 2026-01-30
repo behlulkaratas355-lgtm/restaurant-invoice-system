@@ -116,6 +116,7 @@ const productsRoutes = (await loadRoute('./routes/products.js')).default;
 const usersRoutes = (await loadRoute('./routes/users.js')).default;
 const logsRoutes = (await loadRoute('./routes/logs.js')).default;
 const anomaliesRoutes = (await loadRoute('./routes/anomalies.js')).default;
+const adminRoutes = (await loadRoute('./routes/admin.js')).default;
 
 // ======================
 // API Routes
@@ -129,6 +130,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/anomalies', anomaliesRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ======================
 // Health Check Endpoint
@@ -163,6 +165,7 @@ app.use((req, res) => {
       '/api/users',
       '/api/logs',
       '/api/anomalies',
+      '/api/admin',
       '/health'
     ]
   });
