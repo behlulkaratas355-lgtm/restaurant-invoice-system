@@ -24,6 +24,18 @@ const db = new Database(dbPath, {
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// Миграция: колонка address в restaurants (если БД создана по старой схеме)
+try {
+  const tableInfo = db.prepare("PRAGMA table_info(restaurants)").all();
+  const hasAddress = tableInfo.some((col) => col.name === 'address');
+  if (!hasAddress) {
+    db.exec('ALTER TABLE restaurants ADD COLUMN address TEXT');
+    console.log('DB: добавлена колонка restaurants.address');
+  }
+} catch (e) {
+  console.warn('DB: проверка колонки address:', e.message);
+}
+
 // Функция для выполнения запросов с подготовкой
 export const prepare = (sql) => db.prepare(sql);
 

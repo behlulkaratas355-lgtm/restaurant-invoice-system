@@ -7,6 +7,8 @@ const UploadView = () => {
   const { user, loading } = useAuth();
 
   const [files, setFiles] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [uploadResults, setUploadResults] = useState([]);
@@ -16,8 +18,12 @@ const UploadView = () => {
   const loadData = async () => {
     try {
       setError(null);
-      const filesRes = await api.get('/upload');
+      const [filesRes, restRes] = await Promise.all([
+        api.get('/upload'),
+        api.get('/restaurants'),
+      ]);
       setUploadedFiles(Array.isArray(filesRes.data) ? filesRes.data : []);
+      setRestaurants(Array.isArray(restRes.data) ? restRes.data : []);
     } catch (err) {
       console.error('Ошибка загрузки данных:', err);
       setError(err?.response?.data?.error || err?.message || 'Ошибка загрузки данных');
@@ -31,18 +37,30 @@ const UploadView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, user]);
 
+  const suggestRestaurantFromFilename = (filename) => {
+    const base = filename.replace(/\.(html?|htm)$/i, '').replace(/^\d{10,13}-/, '').replace(/[_-]/g, ' ').trim();
+    if (!base || base.length < 2) return null;
+    const lower = base.toLowerCase();
+    const match = restaurants.find(r => r.name && r.name.toLowerCase() === lower);
+    if (match) return match.id;
+    const partial = restaurants.find(r => r.name && r.name.toLowerCase().includes(lower));
+    return partial ? partial.id : null;
+  };
+
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files || []);
     const htmlFiles = selected.filter(f => f.name.endsWith('.html') || f.name.endsWith('.htm'));
-    
+
     if (htmlFiles.length !== selected.length) {
       alert(`Выбрано ${selected.length} файлов, из них HTML: ${htmlFiles.length}`);
     }
-    
+
     if (htmlFiles.length > 0) {
       setFiles(htmlFiles);
       setUploadResults([]);
       setError(null);
+      const suggestedId = suggestRestaurantFromFilename(htmlFiles[0].name);
+      if (suggestedId && !selectedRestaurantId) setSelectedRestaurantId(String(suggestedId));
     } else {
       alert('Выберите HTML файлы');
       e.target.value = '';
@@ -63,7 +81,6 @@ const UploadView = () => {
 
       const results = [];
 
-      // Загружаем файлы последовательно
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setProgress({ current: i + 1, total: files.length });
@@ -71,6 +88,7 @@ const UploadView = () => {
         try {
           const formData = new FormData();
           formData.append('file', file);
+          if (selectedRestaurantId) formData.append('restaurant_id', selectedRestaurantId);
 
           const res = await api.post('/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
@@ -162,8 +180,26 @@ const UploadView = () => {
           <h3>Загрузить файлы</h3>
           
           <p className="hint">
-            💡 Название ресторана определяется автоматически из имени файла или содержимого HTML
+            Ресторан можно выбрать из списка или оставить пустым — тогда он определится по имени файла.
           </p>
+
+          <div className="form-group">
+            <label>Ресторан (необязательно)</label>
+            <select
+              value={selectedRestaurantId}
+              onChange={(e) => setSelectedRestaurantId(e.target.value)}
+              disabled={uploading}
+              className="restaurant-select"
+            >
+              <option value="">— Выберите ресторан —</option>
+              {restaurants.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+            {restaurants.length === 0 && (
+              <p className="hint-small">Сначала добавьте рестораны в разделе «Рестораны»</p>
+            )}
+          </div>
 
           <div className="form-group">
             <label>HTML файлы накладных (можно выбрать несколько)</label>

@@ -50,12 +50,14 @@ router.get('/', authenticateToken, (req, res) => {
   }
 });
 
-// Загрузка файла
+// Загрузка файла (restaurant_id из формы — приоритет; иначе — из имени файла)
 router.post('/', authenticateToken, logAction('UPLOAD_FILE'), upload.single('file'), (req, res) => {
+  const requestedRestaurantId = req.body.restaurant_id ? parseInt(req.body.restaurant_id, 10) : null;
+
   const transaction = db.transaction((filePath, filesize, userId) => {
     try {
       console.log(`\n🔄 Начало обработки файла: ${filePath}\n`);
-      
+
       // 1) Парсим файл
       const parsed = parseInvoiceHTML(filePath);
 
@@ -63,20 +65,32 @@ router.post('/', authenticateToken, logAction('UPLOAD_FILE'), upload.single('fil
       console.log(`   - Продуктов: ${parsed.stats.products}`);
       console.log(`   - Поставщиков: ${parsed.stats.suppliers}`);
       console.log(`   - Накладных: ${parsed.stats.invoices}`);
-      console.log(`   - Ресторан: ${parsed.restaurantName || 'не определён'}\n`);
+      console.log(`   - Ресторан из файла: ${parsed.restaurantName || 'не определён'}\n`);
 
-      // 2) Определяем/создаём ресторан
+      // 2) Ресторан: из формы (мастер-справочник) или по имени файла
       let restaurantId = null;
-      if (parsed.restaurantName) {
-        let restaurant = db.prepare('SELECT id FROM restaurants WHERE name = ?').get(parsed.restaurantName);
+      let restaurantNameForResponse = null;
 
+      if (requestedRestaurantId) {
+        const restaurant = db.prepare('SELECT id, name FROM restaurants WHERE id = ?').get(requestedRestaurantId);
+        if (restaurant) {
+          restaurantId = restaurant.id;
+          restaurantNameForResponse = restaurant.name;
+          console.log(`✅ Ресторан выбран из справочника: ${restaurant.name} (ID: ${restaurantId})`);
+        }
+      }
+
+      if (restaurantId == null && parsed.restaurantName) {
+        let restaurant = db.prepare('SELECT id, name FROM restaurants WHERE name = ?').get(parsed.restaurantName);
         if (!restaurant) {
           const result = db.prepare('INSERT INTO restaurants (name) VALUES (?)').run(parsed.restaurantName);
           restaurantId = result.lastInsertRowid;
-          console.log(`✅ Создан ресторан: ${parsed.restaurantName} (ID: ${restaurantId})`);
+          restaurantNameForResponse = parsed.restaurantName;
+          console.log(`✅ Создан ресторан из имени файла: ${parsed.restaurantName} (ID: ${restaurantId})`);
         } else {
           restaurantId = restaurant.id;
-          console.log(`✅ Найден ресторан: ${parsed.restaurantName} (ID: ${restaurantId})`);
+          restaurantNameForResponse = restaurant.name;
+          console.log(`✅ Найден ресторан по имени файла: ${parsed.restaurantName} (ID: ${restaurantId})`);
         }
       }
 
@@ -181,7 +195,7 @@ router.post('/', authenticateToken, logAction('UPLOAD_FILE'), upload.single('fil
 
       return {
         file_id: fileId,
-        restaurant_name: parsed.restaurantName || 'Не определён',
+        restaurant_name: restaurantNameForResponse || parsed.restaurantName || 'Не определён',
         stats: parsed.stats,
         saved: savedCounts
       };

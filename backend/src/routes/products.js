@@ -82,7 +82,7 @@ router.get('/suppliers', authenticateToken, (req, res) => {
 router.get('/list', authenticateToken, (req, res) => {
   try {
     const products = db.prepare(`
-      SELECT DISTINCT 
+      SELECT DISTINCT
         p.id,
         p.name,
         p.category
@@ -100,9 +100,9 @@ router.get('/list', authenticateToken, (req, res) => {
 router.get('/:id/price-history', authenticateToken, (req, res) => {
   try {
     const productId = req.params.id;
-    
+
     const priceHistory = db.prepare(`
-      SELECT 
+      SELECT
         i.invoice_date as date,
         ip.price,
         ip.quantity,

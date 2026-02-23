@@ -115,7 +115,12 @@ const RestaurantsView = () => {
               <div className="restaurant-info">
                 <h3>{r.name}</h3>
                 {r.address && <p className="address">📍 {r.address}</p>}
-                <p className="meta">ID: {r.id} | Создан: {new Date(r.created_at).toLocaleDateString('ru-RU')}</p>
+                <p className="meta">
+                  ID: {r.id} | Создан: {new Date(r.created_at).toLocaleDateString('ru-RU')}
+                  {r.updated_at && (
+                    <> | Обновлён: {new Date(r.updated_at).toLocaleDateString('ru-RU')}</>
+                  )}
+                </p>
               </div>
               <div className="restaurant-actions">
                 <button onClick={() => openEditModal(r)} className="btn-small btn-secondary">
