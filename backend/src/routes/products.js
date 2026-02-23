@@ -78,4 +78,52 @@ router.get('/suppliers', authenticateToken, (req, res) => {
   }
 });
 
+// Получить список уникальных продуктов для выбора
+router.get('/list', authenticateToken, (req, res) => {
+  try {
+    const products = db.prepare(`
+      SELECT DISTINCT 
+        p.id,
+        p.name,
+        p.category
+      FROM products p
+      ORDER BY p.name ASC
+    `).all();
+    res.json(products);
+  } catch (error) {
+    console.error('Ошибка получения списка продуктов:', error);
+    res.status(500).json({ error: 'Ошибка получения списка продуктов' });
+  }
+});
+
+// Получить историю изменения цен продукта
+router.get('/:id/price-history', authenticateToken, (req, res) => {
+  try {
+    const productId = req.params.id;
+    
+    const priceHistory = db.prepare(`
+      SELECT 
+        i.invoice_date as date,
+        ip.price,
+        ip.quantity,
+        (ip.quantity * ip.price) as total,
+        i.invoice_number,
+        s.name as supplier_name,
+        COALESCE(f.filename, r.name) as restaurant_name
+      FROM invoice_products ip
+      JOIN invoices i ON ip.invoice_id = i.id
+      LEFT JOIN suppliers s ON i.supplier_id = s.id
+      LEFT JOIN restaurants r ON i.restaurant_id = r.id
+      LEFT JOIN files f ON i.file_id = f.id
+      WHERE ip.product_id = ?
+      ORDER BY i.invoice_date ASC
+    `).all(productId);
+
+    res.json(priceHistory);
+  } catch (error) {
+    console.error('Ошибка получения истории цен:', error);
+    res.status(500).json({ error: 'Ошибка получения истории цен' });
+  }
+});
+
 export default router;

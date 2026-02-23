@@ -4,6 +4,7 @@ import LoginView from '../pages/LoginView';
 import DashboardView from '../pages/DashboardView';
 import RestaurantsView from '../pages/RestaurantsView';
 import ProductsView from '../pages/ProductsView';
+import ProductAnalysisView from '../pages/ProductAnalysisView';
 import InvoicesView from '../pages/InvoicesView';
 import UploadView from '../pages/UploadView';
 import AdminView from '../pages/AdminView';
@@ -44,6 +45,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <ProductsView />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'product-analysis',
+        element: (
+          <ProtectedRoute>
+            <ProductAnalysisView />
           </ProtectedRoute>
         ),
       },

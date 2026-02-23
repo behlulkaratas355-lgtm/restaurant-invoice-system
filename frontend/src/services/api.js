@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://45.144.176.150:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://45.144.176.150:5000/api';
 
 console.log('✅ API URL:', API_BASE_URL);
 
@@ -105,6 +105,8 @@ export const productsAPI = {
   delete: (id) => apiClient.delete(`/products/${id}`),
   getCategories: () => apiClient.get('/products/meta/categories'),
   getSuppliers: () => apiClient.get('/products/meta/suppliers'),
+  getProductsList: () => apiClient.get('/products/list'),
+  getPriceHistory: (id) => apiClient.get(`/products/${id}/price-history`),
 };
 
 // Invoices API

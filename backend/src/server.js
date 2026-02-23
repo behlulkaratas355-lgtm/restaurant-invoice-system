@@ -1,7 +1,5 @@
 import 'dotenv/config';
 import app from './app.js';
-import adminRoutes from './routes/admin.js';
-app.use('/api/admin', adminRoutes)
 
 const PORT = process.env.PORT || 5000;
 
